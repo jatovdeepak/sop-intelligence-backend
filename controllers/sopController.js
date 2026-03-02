@@ -36,13 +36,17 @@ exports.getSOPById = async (req, res) => {
 };
 
 // Created by SOP Intelligence
+// Created by SOP Intelligence
 exports.createSOP = async (req, res) => {
   try {
+      // Safely handle form-data payload
+      const sopData = { ...req.body };
+
       // If content is sent as a stringified JSON (due to form-data), parse it
-      const sopData = {
-          ...req.body,
-          content: typeof req.body.content === 'string' ? JSON.parse(req.body.content) : req.body.content
-      };
+      // Added a check to ensure it doesn't break if `content` is missing from the new UI
+      if (req.body.content && typeof req.body.content === 'string') {
+          sopData.content = JSON.parse(req.body.content);
+      }
 
       if (req.file) {
           sopData.pdfPath = req.file.path; // Save the Multer file path
@@ -52,6 +56,10 @@ exports.createSOP = async (req, res) => {
       await newSOP.save();
       res.status(201).json(newSOP);
   } catch (err) {
+      // Handle MongoDB duplicate key error for the unique sopId
+      if (err.code === 11000) {
+          return res.status(400).json({ error: 'SOP ID already exists.' });
+      }
       res.status(400).json({ error: err.message });
   }
 };

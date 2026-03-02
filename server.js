@@ -52,11 +52,14 @@ const swaggerDocument = {
                     content: {
                         'multipart/form-data': {
                             schema: {
-                                type: 'object',
+                                type: 'object',                
                                 properties: {
-                                    title: { type: 'string' },
-                                    content: { type: 'string', description: 'Must be valid JSON string' },
-                                    status: { type: 'string' },
+                                    sopId: { type: 'string', description: 'e.g., SOP-025' },
+                                    title: { type: 'string', description: 'SOP Name' },
+                                    type: { type: 'string', enum: ['Quality', 'Production', 'Safety'] },
+                                    version: { type: 'string', description: 'e.g., v1.0' },
+                                    description: { type: 'string' },
+                                    status: { type: 'string', description: 'Active | Draft | Archived' },
                                     requiredRoles: { type: 'string', description: 'Enter a role (e.g., Manager)' },
                                     pdf: { type: 'string', format: 'binary' }
                                 }
