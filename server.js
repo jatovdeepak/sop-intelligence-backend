@@ -59,6 +59,7 @@ const swaggerDocument = {
                                     type: { type: 'string', enum: ['Quality', 'Production', 'Safety'] },
                                     version: { type: 'string', description: 'e.g., v1.0' },
                                     description: { type: 'string' },
+                                    references: { type: 'string', description: 'Stringified array of SOP IDs, e.g., ["SOP-001", "SOP-002"]' }, // NEW FIELD
                                     status: { type: 'string', description: 'Active | Draft | Archived' },
                                     requiredRoles: { type: 'string', description: 'Enter a role (e.g., Manager)' },
                                     pdf: { type: 'string', format: 'binary' }

@@ -42,10 +42,18 @@ exports.createSOP = async (req, res) => {
       // Safely handle form-data payload
       const sopData = { ...req.body };
 
-      // If content is sent as a stringified JSON (due to form-data), parse it
-      // Added a check to ensure it doesn't break if `content` is missing from the new UI
+      // Parse stringified JSON content (if any)
       if (req.body.content && typeof req.body.content === 'string') {
           sopData.content = JSON.parse(req.body.content);
+      }
+
+      // NEW: Parse the stringified references array sent from FormData
+      if (req.body.references && typeof req.body.references === 'string') {
+          try {
+              sopData.references = JSON.parse(req.body.references);
+          } catch (e) {
+              return res.status(400).json({ error: 'Invalid references format. Must be a JSON array.' });
+          }
       }
 
       if (req.file) {
