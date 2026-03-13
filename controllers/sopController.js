@@ -37,7 +37,7 @@ exports.getSOPById = async (req, res) => {
 };
 
 // Created by SOP Intelligence
-// Created by SOP Intelligence
+
 exports.createSOP = async (req, res) => {
   try {
       // Safely handle form-data payload
@@ -75,24 +75,29 @@ exports.createSOP = async (req, res) => {
 
 
 exports.downloadSOPPdf = async (req, res) => {
-  try {
-      const sop = req.requestedSOP; 
-
-      // NEW LOGIC: Apply the exact same bypass here for downloading
-      if (!sop.requiredRoles.includes(req.user.role) && req.user.role !== 'Admin' && req.user.role !== 'Operator') {
-          return res.status(403).json({ message: 'You do not have the required role to download this SOP.' });
-      }
-
-      if (!sop.pdfPath) {
-          return res.status(404).json({ message: 'No PDF associated with this SOP.' });
-      }
-
-      const absolutePath = path.resolve(sop.pdfPath);
-      res.sendFile(absolutePath);
-  } catch (err) {
-      res.status(500).json({ error: err.message });
-  }
-};
+    try {
+        const sop = req.requestedSOP; 
+  
+        // Apply the exact same bypass here for downloading
+        if (!sop.requiredRoles.includes(req.user.role) && req.user.role !== 'Admin' && req.user.role !== 'Operator') {
+            return res.status(403).json({ message: 'You do not have the required role to view this SOP.' });
+        }
+  
+        if (!sop.pdfPath) {
+            return res.status(404).json({ message: 'No PDF associated with this SOP.' });
+        }
+  
+        const absolutePath = path.resolve(sop.pdfPath);
+        
+        // FIX: Explicitly set headers to force inline viewing before sending the file
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+        
+        res.sendFile(absolutePath);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+  };
 
 // Delete a specific SOP
 exports.deleteSOP = async (req, res) => {
