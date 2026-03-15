@@ -133,7 +133,7 @@ exports.updateSOP = async (req, res) => {
         const updatedSOP = await SOP.findByIdAndUpdate(
             req.params.id, 
             updateData, 
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
         
         res.json({ message: 'SOP updated successfully.', sop: updatedSOP });
