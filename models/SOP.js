@@ -16,12 +16,14 @@ const sopSchema = new mongoose.Schema({
     data: { type: Object },
     
     // NEW FIELDS FOR RAG
-    embeddingId: { type: String }, // Stores the sanitized ChromaDB document ID (e.g., 'ml11_sop_qcop_61')
+    embeddingId: { type: String }, 
     embeddingStatus: { 
         type: String, 
         enum: ['Not Embedded', 'Pending', 'completed', 'Failed'], 
         default: 'Not Embedded' 
-    } 
+    },
+    lastExtractedTime: { type: Date }, // <-- ADDED THIS
+    lastRagBuildTime: { type: Date }   // <-- ADDED THIS (Highly recommended for the comparison logic)
 }, { timestamps: true });
 
 module.exports = mongoose.model('SOP', sopSchema);
