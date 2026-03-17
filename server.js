@@ -20,7 +20,7 @@ const app = express();
 /* =========================
    MIDDLEWARE
 ========================= */
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000']; // Add your exact frontend URL here
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000']; 
 
 app.use(cors({
   origin: allowedOrigins, 
@@ -31,45 +31,56 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 /* =========================
-   ADVANCED HEALTH FUNCTION
+   CPU USAGE CALCULATOR (FIXED)
 ========================= */
-const getCPUUsage = () => {
+// os.cpus() returns time since boot. To get live usage, we must calculate the difference over time.
+let globalCpuPercent = 0;
+
+const getCpuTimes = () => {
   const cpus = os.cpus();
-
-  let idle = 0;
-  let total = 0;
-
+  let idle = 0, total = 0;
+  
   cpus.forEach(core => {
     for (let type in core.times) {
       total += core.times[type];
     }
     idle += core.times.idle;
   });
-
-  return {
-    usagePercent: Math.round((1 - idle / total) * 100)
-  };
+  
+  return { idle, total };
 };
 
+let lastCpuTimes = getCpuTimes();
+
+// Continuously update the CPU delta every 1 second
+setInterval(() => {
+  const currentCpuTimes = getCpuTimes();
+  
+  const idleDiff = currentCpuTimes.idle - lastCpuTimes.idle;
+  const totalDiff = currentCpuTimes.total - lastCpuTimes.total;
+  
+  globalCpuPercent = totalDiff === 0 ? 0 : Math.round(100 - (100 * idleDiff / totalDiff));
+  lastCpuTimes = currentCpuTimes; // Reset for the next tick
+}, 1000);
+
+/* =========================
+   ADVANCED HEALTH FUNCTION
+========================= */
 const getHealthStatus = () => ({
   status: 'online',
-
   uptime: process.uptime(),
-
   timestamp: Date.now(),
-
   db: {
-    status: mongoose.connection.readyState === 1 ? 'online' : 'db-down'
+    status: mongoose.connection.readyState === 1 ? 'online' : 'OFFLINE'
   },
-
   memory: {
     rss: process.memoryUsage().rss,
     heapTotal: process.memoryUsage().heapTotal,
     heapUsed: process.memoryUsage().heapUsed
   },
-
-  cpu: getCPUUsage(),
-
+  cpu: {
+    usagePercent: globalCpuPercent // Now pulls the live 1-second rolling average
+  },
   system: {
     loadAvg: os.loadavg(),
     freeMemory: os.freemem(),
@@ -129,7 +140,7 @@ const EVENTS = {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // Send full system health immediately
+  // Send full system health immediately on connect
   socket.emit(EVENTS.STATUS, getHealthStatus());
 
   socket.on('disconnect', () => {
