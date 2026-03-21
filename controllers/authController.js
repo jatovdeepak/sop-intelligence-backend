@@ -34,6 +34,7 @@ exports.login = async (req, res) => {
       token,
       system: user.system,
       role: user.role,
+      userid: user._id 
     });
   } catch (err) {
     console.error(err);
