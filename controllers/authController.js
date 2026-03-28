@@ -26,7 +26,7 @@ exports.login = async (req, res) => {
         system: user.system,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '10d' }
     );
 
     // 4. Send response
@@ -58,7 +58,7 @@ exports.extendSession = async (req, res) => {
         system: user.system,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' } // Reset the clock to 1 hour
+      { expiresIn: '10d' } // Reset the clock to 1 hour
     );
 
     res.json({ token: newToken });
