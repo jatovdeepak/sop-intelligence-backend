@@ -145,3 +145,116 @@ exports.updateSOP = async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 };
+
+// Get all SOPs Metadata (Excludes heavy fields: data & pdfPathBase64)
+exports.getAllSOPMetadata = async (req, res) => {
+    try {
+      let filter = {};
+  
+      // Apply the same STEM logic you had before
+      if (req.user.system === 'STEM') {
+        filter.status = 'Active';
+        filter.requiredRoles = req.user.role;
+      }
+  
+      // Use .select() to EXCLUDE data and pdfPathBase64 (using the '-' prefix)
+      const sops = await SOP.find(filter).select('-data -pdfPathBase64 -__v');
+      res.json(sops);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+  
+  // Get ONLY the 'data' field for a specific SOP
+  exports.getSOPDataById = async (req, res) => {
+    try {
+        // Optimized query: Only fetch the 'data' and 'requiredRoles' fields
+        const sop = await SOP.findById(req.params.id).select('data requiredRoles');
+        
+        if (!sop) {
+            return res.status(404).json({ message: 'SOP not found.' });
+        }
+  
+        // Standard RBAC check
+        if (!sop.requiredRoles.includes(req.user.role) && req.user.role !== 'Admin' && req.user.role !== 'Operator') {
+            return res.status(403).json({ message: 'You do not have the required role to view this SOP data.' });
+        }
+  
+        res.json({ data: sop.data });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+  };
+  
+  // Get ONLY the 'pdfPathBase64' field for a specific SOP
+  exports.getSOPPdfBase64ById = async (req, res) => {
+    try {
+        // Optimized query: Only fetch the 'pdfPathBase64' and 'requiredRoles' fields
+        const sop = await SOP.findById(req.params.id).select('pdfPathBase64 requiredRoles');
+        
+        if (!sop) {
+            return res.status(404).json({ message: 'SOP not found.' });
+        }
+  
+        // Standard RBAC check
+        if (!sop.requiredRoles.includes(req.user.role) && req.user.role !== 'Admin' && req.user.role !== 'Operator') {
+            return res.status(403).json({ message: 'You do not have the required role to view this SOP.' });
+        }
+  
+        res.json({ pdfPathBase64: sop.pdfPathBase64 });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+  };
+
+
+  // Get a structured summary of all SOPs for RAG synchronization
+exports.getSOPSummary = async (req, res) => {
+    try {
+        // We are ignoring RBAC filters as requested
+        const summary = await SOP.aggregate([
+            {
+                $facet: {
+                    // Part A: Overall Stats
+                    stats: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalSops: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    // Part B: Counts grouped by Type (Quality, Production, Safety)
+                    countsByType: [
+                        { $group: { _id: "$type", count: { $sum: 1 } } }
+                    ],
+                    // Part C: The actual Metadata list (excluding heavy fields)
+                    metadata: [
+                        {
+                            $project: {
+                                data: 0,
+                                pdfPathBase64: 0,
+                                content: 0,
+                                __v: 0
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+
+        const result = summary[0];
+        
+        res.json({
+            totalSops: result.stats[0]?.totalSops || 0,
+            countsByType: result.countsByType.reduce((acc, curr) => {
+                acc[curr._id] = curr.count;
+                return acc;
+            }, {}),
+            sops: result.metadata
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
